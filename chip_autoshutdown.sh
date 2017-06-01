@@ -13,7 +13,7 @@
 # CHANGE THESE TO CUSTOMIZE THE SCRIPT
 # ****************************
 # ** THESE MUST BE INTEGERS **
-MINVOLTAGELEVEL=3400
+CHARGE_LOW_LIMIT=10
 MINCHARGECURRENT=10
 POLLING_WAIT=1
 
@@ -43,19 +43,14 @@ do
     # SEE IF BATTERY EXISTS
     BAT_EXIST=$(($(($POWER_OP_MODE&0x20))/32))
     if [ $BAT_EXIST == 1 ]; then
-        
-        # log "CHIP HAS A BATTERY ATTACHED"
-        BAT_VOLT_MSB=$(/usr/sbin/i2cget -y -f 0 0x34 0x78)
-        BAT_VOLT_LSB=$(/usr/sbin/i2cget -y -f 0 0x34 0x79)
-        BAT_BIN=$(( $(($BAT_VOLT_MSB << 4)) | $(($(($BAT_VOLT_LSB & 0x0F)) )) ))
-        BAT_VOLT_FLOAT=$(echo "($BAT_BIN*1.1)"|bc)
-        # CONVERT TO AN INTEGER
-        BAT_VOLT=${BAT_VOLT_FLOAT%.*}
+        FUEL_GAUGE=$(i2cget -y -f 0 0x34 0x0b9)
+        FUEL_GAUGE=$(($FUEL_GAUGE&0x7f))
+
             
         # CHECK BATTERY LEVEL AGAINST MINVOLTAGELEVEL
-        if [ $BAT_VOLT -le $MINVOLTAGELEVEL ]; then
-            # log "CHIP BATTERY VOLTAGE IS LESS THAN $MINVOLTAGELEVEL"
-            # log "CHECKING FOR CHIP BATTERY CHARGING"
+        if [ $FUEL_GAUGE -le $CHARGE_LOW_LIMIT ]; then
+            log "CHIP BATTERY CHARGE IS LESS THAN $CHARGE_LOW_LIMIT"
+            
             # GET THE CHARGE CURRENT
             BAT_ICHG_MSB=$(/usr/sbin/i2cget -y -f 0 0x34 0x7A)
             BAT_ICHG_LSB=$(/usr/sbin/i2cget -y -f 0 0x34 0x7B)
